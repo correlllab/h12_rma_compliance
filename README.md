@@ -1,135 +1,88 @@
-# Template for Isaac Lab Projects
+# SoftRMA: Compliant Control for Unitree H12
+
+Model-free Rapid Motor Adaptation for learning compliant, human-interactive whole-body control on humanoid robots.
 
 ## Overview
 
-This project/repository serves as a template for building projects or extensions based on Isaac Lab.
-It allows you to develop in an isolated environment, outside of the core Isaac Lab repository.
+SoftRMA enables the Unitree H12 robot to learn compliant behaviors that allow it to "yield" when pushed or pulled by a human. Instead of resisting external forces like traditional rigid controllers, the robot learns to minimize energy expenditure by intelligently yielding while maintaining stability.
 
-**Key Features:**
+The system is trained in two phases:
+1. **Base Policy**: Learns compliant control with access to ground-truth force information
+2. **Adaptation Module**: Learns to estimate forces from the robot's joint history, enabling deployment without external sensors
 
-- `Isolation` Work outside the core Isaac Lab repository, ensuring that your development efforts remain self-contained.
-- `Flexibility` This template is set up to allow your code to be run as an extension in Omniverse.
+## Key Features
 
-**Keywords:** extension, template, isaaclab
+- **Model-Free Learning**: No inverse kinematics or hand-crafted admittance controllers needed
+- **Online Adaptation**: Estimates external forces in real-time from joint state history
 
-## Installation
+### Prerequisites
 
-- Install Isaac Lab by following the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
-  We recommend using the conda or uv installation as it simplifies calling Python scripts from the terminal.
+- **Isaac Lab**: Follow the [official installation guide](https://docs.isaacsim.nvidia.com/)
+- **Python 3.8+**: Recommended to use conda or uv
 
-- Clone or copy this project/repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
+### Setup
 
-- Using a python interpreter that has Isaac Lab installed, install the library in editable mode using:
+1. Clone this repository outside your core Isaac Lab directory:
+   ```bash
+   git clone <repo-url>
+   cd h12_rma_compliance
+   ```
 
-    ```bash
-    # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-    python -m pip install -e source/h12_rma_compliance
+2. Install the extension in editable mode:
+   ```bash
+   python -m pip install -e source/h12_rma_compliance
+   ```
 
-- Verify that the extension is correctly installed by:
+3. Verify installation:
+   ```bash
+   python scripts/list_envs.py
+   ```
+   Look for `H12-SoftRMA-Base-v0`, `H12-SoftRMA-Adapt-v0`, and similar tasks in the output.
+## Usage
+<!-- 
+### Phase 1: Train Base Policy
 
-    - Listing the available tasks:
-
-        Note: It the task name changes, it may be necessary to update the search pattern `"Template-"`
-        (in the `scripts/list_envs.py` file) so that it can be listed.
-
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/list_envs.py
-        ```
-
-    - Running a task:
-
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/<RL_LIBRARY>/train.py --task=<TASK_NAME>
-        ```
-
-    - Running a task with dummy agents:
-
-        These include dummy agents that output zero or random agents. They are useful to ensure that the environments are configured correctly.
-
-        - Zero-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/zero_agent.py --task=<TASK_NAME>
-            ```
-        - Random-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/random_agent.py --task=<TASK_NAME>
-            ```
-
-### Set up IDE (Optional)
-
-To setup the IDE, please follow these instructions:
-
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu.
-  When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
-
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory.
-The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse.
-This helps in indexing all the python modules for intelligent suggestions while writing code.
-
-### Setup as Omniverse Extension (Optional)
-
-We provide an example UI extension that will load upon enabling your extension defined in `source/h12_rma_compliance/h12_rma_compliance/ui_extension_example.py`.
-
-To enable your extension, follow these steps:
-
-1. **Add the search path of this project/repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon**, then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to the `source` directory of this project/repository.
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon**, then click `Refresh`.
-
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
-
-## Code formatting
-
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
+Train the oracle policy with ground-truth force information:
 
 ```bash
-pip install pre-commit
+python scripts/rsl_rl/train.py --task=H12-SoftRMA-Base-v0 --headless
 ```
 
-Then you can run pre-commit with:
+### Phase 2: Train Adaptation Module
+
+Train the force estimation network from the base policy checkpoint:
 
 ```bash
-pre-commit run --all-files
+python scripts/rsl_rl/train.py --task=H12-SoftRMA-Adapt-v0 --checkpoint=<path/to/base_policy> --headless
+``` -->
+
+<!-- ### Phase 3: Deploy and Visualize
+
+Run the trained policy with the adaptation module enabled:
+
+```bash
+python scripts/rsl_rl/play.py --task=H12-SoftRMA-Deploy-v0 --checkpoint=<path/to/adapted_policy> --num_envs=1
+``` -->
+<!-- ## Project Structure
+
 ```
+h12_rma_compliance/
+├── scripts/                 # Training and inference scripts
+│   └── rsl_rl/             # RL training pipeline (train.py, play.py)
+├── source/
+│   └── h12_rma_compliance/ # Main package
+│       ├── tasks/          # Isaac Lab environment configurations
+│       └── h12_rma_compliance/
+│           ├── tasks/      # Task definitions
+│           │   └── manager_based/h12_rma_compliance/
+│           │       ├── h12_rma_compliance_env_cfg.py
+│           │       ├── agents/      # Policy configurations
+│           │       └── mdp/         # Reward functions
+│           └── ui_extension_example.py
+└── README.md
+``` -->
 
-## Troubleshooting
+## License
 
-### Pylance Missing Indexing of Extensions
+[Add license information here]
 
-In some VsCode versions, the indexing of part of the extensions is missing.
-In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
-
-```json
-{
-    "python.analysis.extraPaths": [
-        "<path-to-ext-repo>/source/h12_rma_compliance"
-    ]
-}
-```
-
-### Pylance Crash
-
-If you encounter a crash in `pylance`, it is probable that too many files are indexed and you run out of memory.
-A possible solution is to exclude some of omniverse packages that are not used in your project.
-To do so, modify `.vscode/settings.json` and comment out packages under the key `"python.analysis.extraPaths"`
-Some examples of packages that can likely be excluded are:
-
-```json
-"<path-to-isaac-sim>/extscache/omni.anim.*"         // Animation packages
-"<path-to-isaac-sim>/extscache/omni.kit.*"          // Kit UI tools
-"<path-to-isaac-sim>/extscache/omni.graph.*"        // Graph UI tools
-"<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
-...
-```
