@@ -15,6 +15,8 @@ No other complex rewards or task-specific objectives.
 
 import math
 
+import torch
+
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg
@@ -29,7 +31,6 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 from isaaclab.envs import mdp
-from . import mdp as local_mdp
 from h12_rma_compliance.assets.unitree import H12_CFG_HANDLESS
 
 
@@ -48,18 +49,12 @@ class H12BasicBalanceSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.GroundPlaneCfg(size=(100.0, 100.0)),
     )
 
-    # robot - H12 humanoid
+    # robot
     robot: ArticulationCfg = H12_CFG_HANDLESS.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-    # lights
-    dome_light = AssetBaseCfg(
-        prim_path="/World/DomeLight",
-        spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=500.0),
-    )
 
 
 ##
-# MDP settingss
+# Actions definition
 ##
 
 
@@ -67,32 +62,27 @@ class H12BasicBalanceSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    # H12 has 21 DOF: 12 legs + 1 torso + 8 arms (4 per arm with elbows)
-    joint_effort = mdp.JointPositionActionCfg(
+    # Joint position control - 21 DOF for H12
+    joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=[
-            # Left leg (6 DOF)
             "left_hip_yaw_joint",
             "left_hip_roll_joint",
             "left_hip_pitch_joint",
             "left_knee_joint",
             "left_ankle_pitch_joint",
             "left_ankle_roll_joint",
-            # Right leg (6 DOF)
             "right_hip_yaw_joint",
             "right_hip_roll_joint",
             "right_hip_pitch_joint",
             "right_knee_joint",
             "right_ankle_pitch_joint",
             "right_ankle_roll_joint",
-            # Torso (1 DOF)
             "torso_joint",
-            # Left arm (4 DOF)
             "left_shoulder_pitch_joint",
             "left_shoulder_roll_joint",
             "left_shoulder_yaw_joint",
             "left_elbow_joint",
-            # Right arm (4 DOF)
             "right_shoulder_pitch_joint",
             "right_shoulder_roll_joint",
             "right_shoulder_yaw_joint",
@@ -157,20 +147,46 @@ class EventCfg:
     )
 
 
+def alive_bonus(env) -> torch.Tensor:
+    """Reward for being alive. Fixed bonus per step."""
+    return torch.ones(env.num_envs, device=env.device)
+
+
+def base_height_l2(env, asset_cfg: SceneEntityCfg, target_height: float = 1.04) -> torch.Tensor:
+    """Reward for maintaining target base height (L2 distance from target)."""
+    # Get current base height
+    base_pos = env.scene[asset_cfg.name].data.root_pos_w[:, 2]
+    
+    # Reward based on distance from target height (quadratic penalty)
+    height_error = torch.abs(base_pos - target_height)
+    reward = torch.exp(-2.0 * height_error)
+    
+    return reward
+
+
+def base_height_below_threshold(env, cfg: SceneEntityCfg, threshold: float = 0.4) -> torch.Tensor:
+    """Penalty for falling below minimum height threshold."""
+    # Get current base height
+    base_pos = env.scene[cfg.name].data.root_pos_w[:, 2]
+    
+    # Return boolean tensor: True if below threshold (triggers termination)
+    return base_pos < threshold
+
+
 @configclass
 class RewardsCfg:
     """Reward terms for the MDP - MINIMAL SET."""
 
     # (1) Alive bonus: reward for staying upright (not falling)
     alive = RewTerm(
-        func=local_mdp.alive_bonus,
+        func=alive_bonus,
         weight=5.0,
         params={},
     )
 
     # (2) Standing reward: encourage maintaining height
     standing = RewTerm(
-        func=local_mdp.base_height_l2,
+        func=base_height_l2,
         weight=5.0,
         params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 1.04},
     )
@@ -185,8 +201,8 @@ class TerminationsCfg:
 
     # Base height too low (fell down)
     base_height_low = DoneTerm(
-        func=local_mdp.base_height_below_threshold,
-        params={"asset_cfg": SceneEntityCfg("robot"), "threshold": 0.4},
+        func=base_height_below_threshold,
+        params={"cfg": SceneEntityCfg("robot"), "threshold": 0.4},
     )
 
 
