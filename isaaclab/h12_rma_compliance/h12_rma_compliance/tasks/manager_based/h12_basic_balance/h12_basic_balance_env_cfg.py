@@ -59,7 +59,7 @@ class H12BasicBalanceSceneCfg(InteractiveSceneCfg):
 
 
 ##
-# MDP settings
+# MDP settingss
 ##
 
 
