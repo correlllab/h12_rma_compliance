@@ -33,6 +33,9 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab.envs import mdp
 from h12_rma_compliance.assets.unitree import H12_CFG_HANDLESS
 
+# Import custom reward functions from local mdp module
+from . import mdp as local_mdp
+
 
 ##
 # Scene definition
@@ -72,17 +75,21 @@ class ActionsCfg:
             "left_knee_joint",
             "left_ankle_pitch_joint",
             "left_ankle_roll_joint",
+
             "right_hip_yaw_joint",
             "right_hip_roll_joint",
             "right_hip_pitch_joint",
             "right_knee_joint",
             "right_ankle_pitch_joint",
             "right_ankle_roll_joint",
+
             "torso_joint",
+
             "left_shoulder_pitch_joint",
             "left_shoulder_roll_joint",
             "left_shoulder_yaw_joint",
             "left_elbow_joint",
+
             "right_shoulder_pitch_joint",
             "right_shoulder_roll_joint",
             "right_shoulder_yaw_joint",
@@ -147,23 +154,6 @@ class EventCfg:
     )
 
 
-def alive_bonus(env) -> torch.Tensor:
-    """Reward for being alive. Fixed bonus per step."""
-    return torch.ones(env.num_envs, device=env.device)
-
-
-def base_height_l2(env, asset_cfg: SceneEntityCfg, target_height: float = 1.04) -> torch.Tensor:
-    """Reward for maintaining target base height (L2 distance from target)."""
-    # Get current base height
-    base_pos = env.scene[asset_cfg.name].data.root_pos_w[:, 2]
-    
-    # Reward based on distance from target height (quadratic penalty)
-    height_error = torch.abs(base_pos - target_height)
-    reward = torch.exp(-2.0 * height_error)
-    
-    return reward
-
-
 def base_height_below_threshold(env, cfg: SceneEntityCfg, threshold: float = 0.4) -> torch.Tensor:
     """Penalty for falling below minimum height threshold."""
     # Get current base height
@@ -179,16 +169,23 @@ class RewardsCfg:
 
     # (1) Alive bonus: reward for staying upright (not falling)
     alive = RewTerm(
-        func=alive_bonus,
+        func=local_mdp.alive_bonus,
         weight=5.0,
         params={},
     )
 
     # (2) Standing reward: encourage maintaining height
     standing = RewTerm(
-        func=base_height_l2,
+        func=local_mdp.base_height_l2,
         weight=5.0,
         params={"asset_cfg": SceneEntityCfg("robot"), "target_height": 1.04},
+    )
+
+    # (3) Velocity penalty: encourage staying still (zero velocity)
+    base_vel_penalty = RewTerm(
+        func=local_mdp.base_velocity_penalty,
+        weight=0.5,
+        params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
 
