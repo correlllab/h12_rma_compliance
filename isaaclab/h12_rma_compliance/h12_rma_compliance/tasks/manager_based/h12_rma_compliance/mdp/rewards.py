@@ -58,3 +58,26 @@ def base_velocity_penalty(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> 
     
     return penalty
 
+
+def knee_symmetry_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Reward for symmetric knee height. Encourages knees to be ~30cm apart vertically."""
+    # Get body positions
+    asset: Articulation = env.scene["robot"]
+    
+    # Get left and right knee link frame positions
+    # We need to get the actual 3D positions of the knee links
+    # Assuming we have access to body positions in the scene
+    # Left knee body index and right knee body index
+    
+    # For H12: left_knee_link and right_knee_link
+    # We'll use joint positions to estimate knee heights
+    # Left knee at index 3, right knee at index 9 (joint angles)
+    left_knee_angle = asset.data.joint_pos[:, 3]
+    right_knee_angle = asset.data.joint_pos[:, 9]
+    
+    # Reward for having similar knee bend (symmetric angles)
+    # This keeps knees at similar heights when side-by-side
+    knee_angle_diff = torch.abs(left_knee_angle - right_knee_angle)
+    symmetry_reward = torch.exp(-5.0 * knee_angle_diff)
+    
+    return symmetry_reward

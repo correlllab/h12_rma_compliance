@@ -1,8 +1,8 @@
 # H12 Basic Balancing Environment - MuJoCo Deployment Config
 # Aligned with Isaac Lab basic balance environment
 
-policy_path: "{LEGGED_GYM_ROOT_DIR}/deploy/pre_train/h12_basic_balance/policy.pt"
-xml_path: "/home/niraj/research_projects/h12_rma_compliance/mujoco/h1_2/scene.xml"
+policy_path: "policies/exported/policy.pt"
+xml_path: "h1_2/scene.xml"
 
 # Total simulation time
 simulation_duration: 60.0
@@ -11,24 +11,27 @@ simulation_dt: 0.002
 # Controller update frequency (decimation=2, control at 60Hz to match Isaac Lab)
 control_decimation: 10
 
-# PD gains for each joint (21 DOF for H12)
+# PD gains for each joint (13 DOF for H12 legs+torso only)
 kps: [200, 200, 200, 300, 40, 40,
       200, 200, 200, 300, 40, 40,
-      100,
-      200, 200, 200, 100,
-      200, 200, 200, 100]
+      100]
 kds: [2.5, 2.5, 2.5, 4, 2, 2,
       2.5, 2.5, 2.5, 4, 2, 2,
-      2.5,
-      2.5, 2.5, 2.5, 1,
-      2.5, 2.5, 2.5, 1]
+      2.5]
 
-# Default angles for all 21 joints
+# Default angles for all 13 joints (legs + torso)
 default_angles: [0, -0.16, 0.0, 0.36, -0.2, 0.0,
                  0, -0.16, 0.0, 0.36, -0.2, 0.0,
-                 0,
-                 0, 0, 0, 0,
-                 0, 0, 0, 0]
+                 0]
+
+# Motor position limits (left leg: [hip_yaw, hip_roll, hip_pitch, knee, ankle_pitch, ankle_roll])
+# Then right leg with same pattern, then torso
+legs_motor_pos_lower_limit_list: [-0.43, -3.14, -0.43, -0.26, -0.897334, -0.261799,
+                                   -0.43, -3.14, -3.14, -0.26, -0.897334, -0.261799]
+legs_motor_pos_upper_limit_list: [0.43, 2.5, 3.14, 2.05, 0.523598, 0.261799,
+                                   0.43, 2.5, 0.43, 2.05, 0.523598, 0.261799]
+torso_lower_limit: -1.57  # -pi/2
+torso_upper_limit: 1.57   # pi/2
 
 # Observation scales (matching Isaac Lab normalization)
 ang_vel_scale: 0.2
@@ -37,5 +40,5 @@ dof_vel_scale: 0.1
 action_scale: 0.25
 
 # Number of DOFs and observations
-num_actions: 21
-num_obs: 69
+num_actions: 13
+num_obs: 45

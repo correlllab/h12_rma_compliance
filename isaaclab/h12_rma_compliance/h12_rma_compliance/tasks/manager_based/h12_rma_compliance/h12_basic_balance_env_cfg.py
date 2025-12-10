@@ -65,7 +65,18 @@ class H12BasicBalanceSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    # Joint position control - 21 DOF for H12
+    # Motor position limits (from h1_2.yaml)
+    # Joint order: [hip_yaw, hip_pitch, hip_roll, knee, ankle_pitch, ankle_roll] for left then right leg
+    legs_motor_pos_lower_limit_list = [-0.43, -3.14, -0.43, -0.26, -0.897334, -0.261799,
+                                       -0.43, -3.14, -3.14, -0.26, -0.897334, -0.261799]
+    legs_motor_pos_upper_limit_list = [0.43, 2.5, 3.14, 2.05, 0.523598, 0.261799,
+                                       0.43, 2.5, 0.43, 2.05, 0.523598, 0.261799]
+    
+    # Torso limits
+    torso_lower_limit = -1.57  # -pi/2
+    torso_upper_limit = 1.57   # pi/2
+
+    # Joint position control - 13 DOF (legs + torso only, no upper body)
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=[
@@ -84,16 +95,6 @@ class ActionsCfg:
             "right_ankle_roll_joint",
 
             "torso_joint",
-
-            "left_shoulder_pitch_joint",
-            "left_shoulder_roll_joint",
-            "left_shoulder_yaw_joint",
-            "left_elbow_joint",
-
-            "right_shoulder_pitch_joint",
-            "right_shoulder_roll_joint",
-            "right_shoulder_yaw_joint",
-            "right_elbow_joint",
         ],
         scale=0.25,
     )
@@ -115,7 +116,7 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self) -> None:
-            self.enable_corruption = False
+            self.enable_corruption = True
             self.concatenate_terms = True
 
     # observation groups
@@ -184,8 +185,15 @@ class RewardsCfg:
     # (3) Velocity penalty: encourage staying still (zero velocity)
     base_vel_penalty = RewTerm(
         func=local_mdp.base_velocity_penalty,
-        weight=0.5,
+        weight=5.0,
         params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    # (4) Knee symmetry: encourage balanced stance
+    knee_symmetry = RewTerm(
+        func=local_mdp.knee_symmetry_reward,
+        weight=3.0,
+        params={},
     )
 
 

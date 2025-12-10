@@ -178,14 +178,6 @@
     <motor name="right_ankle_pitch_joint" joint="right_ankle_pitch_joint"/>
     <motor name="right_ankle_roll_joint" joint="right_ankle_roll_joint"/>
     <motor name="torso_joint" joint="torso_joint"/>
-    <motor name="left_shoulder_pitch_joint" joint="left_shoulder_pitch_joint"/>
-    <motor name="left_shoulder_roll_joint" joint="left_shoulder_roll_joint"/>
-    <motor name="left_shoulder_yaw_joint" joint="left_shoulder_yaw_joint"/>
-    <motor name="left_elbow_pitch_joint" joint="left_elbow_pitch_joint"/>
-    <motor name="right_shoulder_pitch_joint" joint="right_shoulder_pitch_joint"/>
-    <motor name="right_shoulder_roll_joint" joint="right_shoulder_roll_joint"/>
-    <motor name="right_shoulder_yaw_joint" joint="right_shoulder_yaw_joint"/>
-    <motor name="right_elbow_pitch_joint" joint="right_elbow_pitch_joint"/>
   </actuator>
 
   <sensor>
