@@ -77,6 +77,7 @@ class H12BasicBalanceDeployer:
         
         self.num_actions = self.config["num_actions"]
         self.num_obs = self.config["num_obs"]
+        self.num_arm_dofs = 14  # 7 per arm (3 shoulder + 1 elbow_pitch + 1 elbow_roll + 1 wrist_pitch + 1 wrist_yaw)
         self.action_scale = self.config.get("action_scale", 0.25)
         self.ang_vel_scale = self.config.get("ang_vel_scale", 0.2)
         self.dof_pos_scale = self.config.get("dof_pos_scale", 1.0)
@@ -212,7 +213,34 @@ class H12BasicBalanceDeployer:
                     self.d.qvel[6:6+self.num_actions],  # Only first 13 joints
                     self.kds
                 )
-                self.d.ctrl[:] = tau
+                
+                # Set upper body (arms) to zero angles with PD control
+                # Arm DOF indices: qpos[7+13 : 7+13+14] = qpos[20:34]
+                #                 qvel[6+13 : 6+13+14] = qvel[19:33]
+                arm_start_qpos = 7 + self.num_actions
+                arm_start_qvel = 6 + self.num_actions
+                
+                arm_target_angles = np.zeros(self.num_arm_dofs, dtype=np.float32)
+                arm_current_angles = self.d.qpos[arm_start_qpos:arm_start_qpos+self.num_arm_dofs]
+                arm_current_vels = self.d.qvel[arm_start_qvel:arm_start_qvel+self.num_arm_dofs]
+                
+                # PD gains for arms (low stiffness to keep them relaxed)
+                arm_kps = np.ones(self.num_arm_dofs) * 50.0   # Low stiffness
+                arm_kds = np.ones(self.num_arm_dofs) * 1.5    # Low damping
+                
+                arm_tau = pd_control(
+                    arm_target_angles,
+                    arm_current_angles,
+                    arm_kps,
+                    np.zeros(self.num_arm_dofs),  # No target velocity
+                    arm_current_vels,
+                    arm_kds
+                )
+                
+                # Combine control torques: [leg+torso (13) + arm (14)] = 27 total
+                self.d.ctrl[:self.num_actions] = tau
+                self.d.ctrl[self.num_actions:self.num_actions+self.num_arm_dofs] = arm_tau
+                
                 mujoco.mj_step(self.m, self.d)
                 
                 self.counter += 1

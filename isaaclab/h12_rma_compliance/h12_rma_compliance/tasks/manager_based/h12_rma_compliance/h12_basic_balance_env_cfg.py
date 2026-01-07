@@ -65,17 +65,6 @@ class H12BasicBalanceSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    # Motor position limits (from h1_2.yaml)
-    # Joint order: [hip_yaw, hip_pitch, hip_roll, knee, ankle_pitch, ankle_roll] for left then right leg
-    legs_motor_pos_lower_limit_list = [-0.43, -3.14, -0.43, -0.26, -0.897334, -0.261799,
-                                       -0.43, -3.14, -3.14, -0.26, -0.897334, -0.261799]
-    legs_motor_pos_upper_limit_list = [0.43, 2.5, 3.14, 2.05, 0.523598, 0.261799,
-                                       0.43, 2.5, 0.43, 2.05, 0.523598, 0.261799]
-    
-    # Torso limits
-    torso_lower_limit = -1.57  # -pi/2
-    torso_upper_limit = 1.57   # pi/2
-
     # Joint position control - 13 DOF (legs + torso only, no upper body)
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",

@@ -31,15 +31,15 @@ def alive_bonus(env: ManagerBasedRLEnv) -> torch.Tensor:
     return torch.ones(env.num_envs, device=env.device)
 
 
-def base_height_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 1.04) -> torch.Tensor:
+def base_height_l2(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: float = 0.95) -> torch.Tensor:
     """Reward for maintaining target base height (L2 distance from target)."""
     # Get current base height
     asset: Articulation = env.scene[asset_cfg.name]
     base_pos = asset.data.root_pos_w[:, 2]
     
-    # Reward based on distance from target height (quadratic penalty)
+    # Reward based on distance from target height (smoother exponential penalty)
     height_error = torch.abs(base_pos - target_height)
-    reward = torch.exp(-2.0 * height_error)
+    reward = torch.exp(-1.0 * height_error)
     
     return reward
 
@@ -60,24 +60,25 @@ def base_velocity_penalty(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> 
 
 
 def knee_symmetry_reward(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """Reward for symmetric knee height. Encourages knees to be ~30cm apart vertically."""
+    """Reward for symmetric knee distance. Encourages knees to maintain constant distance."""
     # Get body positions
     asset: Articulation = env.scene["robot"]
     
     # Get left and right knee link frame positions
-    # We need to get the actual 3D positions of the knee links
-    # Assuming we have access to body positions in the scene
-    # Left knee body index and right knee body index
+    # Body names: "left_knee_link" (body index 5) and "right_knee_link" (body index 11)
+    # These are fixed body indices in the H12 URDF
+    left_knee_pos = asset.data.body_pos_w[:, 5, :]  # 3D position of left knee link
+    right_knee_pos = asset.data.body_pos_w[:, 11, :]  # 3D position of right knee link
     
-    # For H12: left_knee_link and right_knee_link
-    # We'll use joint positions to estimate knee heights
-    # Left knee at index 3, right knee at index 9 (joint angles)
-    left_knee_angle = asset.data.joint_pos[:, 3]
-    right_knee_angle = asset.data.joint_pos[:, 9]
+    # Calculate distance between left and right knees
+    knee_distance = torch.norm(left_knee_pos - right_knee_pos, dim=-1)
     
-    # Reward for having similar knee bend (symmetric angles)
-    # This keeps knees at similar heights when side-by-side
-    knee_angle_diff = torch.abs(left_knee_angle - right_knee_angle)
-    symmetry_reward = torch.exp(-5.0 * knee_angle_diff)
+    # Target distance (approximately 0.27m for H12's stance width)
+    target_distance = 0.27
+    
+    # Reward based on how close distance is to target
+    # Negative reward for deviation from target distance
+    distance_error = torch.abs(knee_distance - target_distance)
+    symmetry_reward = torch.exp(-10.0 * distance_error)
     
     return symmetry_reward

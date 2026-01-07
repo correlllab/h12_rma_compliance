@@ -19,11 +19,8 @@ from isaaclab.utils import configclass
 
 from . import mdp
 
-##
-# Pre-defined configs
-##
-
-from isaaclab_assets.robots.cartpole import CARTPOLE_CFG  # isort:skip
+from h12_rma_compliance.assets.unitree import H12_CFG_HANDLESS
+from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 
 ##
@@ -42,7 +39,7 @@ class H12RmaComplianceSceneCfg(InteractiveSceneCfg):
     )
 
     # robot
-    robot: ArticulationCfg = CARTPOLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = H12_CFG_HANDLESS.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # lights
     dome_light = AssetBaseCfg(
@@ -57,11 +54,49 @@ class H12RmaComplianceSceneCfg(InteractiveSceneCfg):
 
 
 @configclass
+class CommandsCfg:
+    """Command specifications for the MDP."""
+
+    lin_vel_x_and_height_z = mdp.UniformVelocityCommandCfg(
+        asset_name="robot",
+        resampling_time_range=(10.0, 10.0),
+        rel_standing_envs=0.3,
+        rel_heading_envs=0.0,
+        heading_command=False,
+        debug_vis=True,
+        ranges=mdp.UniformVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            height=(0.6, 1.05),
+        ),
+    )
+
+
+@configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    joint_effort = mdp.JointEffortActionCfg(asset_name="robot", joint_names=["slider_to_cart"], scale=100.0)
+    # Joint position control - 13 DOF (legs + torso only, no upper body)
+    joint_pos = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[
+            "left_hip_yaw_joint",
+            "left_hip_roll_joint",
+            "left_hip_pitch_joint",
+            "left_knee_joint",
+            "left_ankle_pitch_joint",
+            "left_ankle_roll_joint",
 
+            "right_hip_yaw_joint",
+            "right_hip_roll_joint",
+            "right_hip_pitch_joint",
+            "right_knee_joint",
+            "right_ankle_pitch_joint",
+            "right_ankle_roll_joint",
+
+            "torso_joint",
+        ],
+        scale=0.25,
+    )
 
 @configclass
 class ObservationsCfg:
@@ -72,16 +107,34 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # observation terms (order preserved)
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel)
+        # https://isaac-sim.github.io/IsaacLab/main/source/api/lab/isaaclab.envs.mdp.html
+        
+        #root informations 
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+        
+        #gravity projection on hte root 
+        projected_gravity = ObsTerm(
+            func=mdp.projected_gravity,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+        )
 
-        def __post_init__(self) -> None:
-            self.enable_corruption = False
+        # command inputs linear velocity x and height z
+        commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "lin_vel_x_and_hz"})
+        
+        # proprioception joint positions and velocities
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+        
+        # last action
+        actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self):
+            self.enable_corruption = True
             self.concatenate_terms = True
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
-
 
 @configclass
 class EventCfg:

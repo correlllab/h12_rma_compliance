@@ -1,5 +1,7 @@
 # H12 Basic Balancing Environment - MuJoCo Deployment Config
 # Aligned with Isaac Lab basic balance environment
+# Note: 21 total DOF (13 lower body + 8 arm), but policy only controls 13 DOF (lower body)
+# Arms are set to 0,0,0... angles with low stiffness PD control
 
 policy_path: "policies/exported/policy.pt"
 xml_path: "h1_2/scene.xml"
@@ -20,6 +22,7 @@ kds: [2.5, 2.5, 2.5, 4, 2, 2,
       2.5]
 
 # Default angles for all 13 joints (legs + torso)
+# Arms are NOT controlled by policy - they stay at 0,0,0...
 default_angles: [0, -0.16, 0.0, 0.36, -0.2, 0.0,
                  0, -0.16, 0.0, 0.36, -0.2, 0.0,
                  0]
@@ -40,5 +43,6 @@ dof_vel_scale: 0.1
 action_scale: 0.25
 
 # Number of DOFs and observations
+# Policy controls 13 DOF, but MuJoCo has 21 DOF total (13 lower + 8 arm)
 num_actions: 13
 num_obs: 45
